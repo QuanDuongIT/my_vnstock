@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>VCI Stock Dashboard</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+            background: #f4f4f4;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th {
+            background: black;
+            color: white;
+            padding: 10px;
+        }
+
+        td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>📈 VCI Stock Dashboard</h1>
+
+    <table>
+
+        <tr>
+            <th>Time</th>
+            <th>Open</th>
+            <th>High</th>
+            <th>Low</th>
+            <th>Close</th>
+            <th>Volume</th>
+        </tr>
+
+        {% for r in data %}
+
+        <tr>
+            <td>{{ r.time }}</td>
+            <td>{{ format_price(r.open) }}</td>
+            <td>{{ format_price(r.high) }}</td>
+            <td>{{ format_price(r.low) }}</td>
+            <td>{{ format_price(r.close) }}</td>
+            <td>{{ format_volume(r.volume) }}</td>
+        </tr>
+
+        {% endfor %}
+
+    </table>
+
+    <br>
+
+    <a href="/api/stock/data">JSON API</a>
+
+</body>
+
+</html>
