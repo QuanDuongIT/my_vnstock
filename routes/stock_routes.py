@@ -14,17 +14,10 @@ import threading
 
 stock_bp = Blueprint("stock", __name__)
 
-
 @stock_bp.route("/")
 def home():
 
     data = get_data()
-    send_email(
-        subject="Test Flask",
-        body="Hello from Flask",
-        # to_email="dttdthhixjve@gmail.com"
-        to_email="tieuduong.25.1.98@gmail.com"
-    )
 
     return render_template(
         "index.html",
@@ -33,6 +26,17 @@ def home():
         format_volume=format_volume
     )
 
+
+@stock_bp.route("/test-mail")
+def test_mail():
+
+    send_email(
+        subject="Test",
+        body="Hello Flask",
+        to_email="tieuduong.25.1.98@gmail.com"
+    )
+
+    return "Mail sent"
 
 @stock_bp.route("/api/stock/data")
 def api_data():
