@@ -9,7 +9,7 @@ from services.stock_service import (
     update_stock,
     delete_stock
 )
-
+from services.email_service import send_email
 import threading
 
 stock_bp = Blueprint("stock", __name__)
@@ -19,6 +19,12 @@ stock_bp = Blueprint("stock", __name__)
 def home():
 
     data = get_data()
+    send_email(
+        subject="Test Flask",
+        body="Hello from Flask",
+        # to_email="dttdthhixjve@gmail.com"
+        to_email="tieuduong.25.1.98@gmail.com"
+    )
 
     return render_template(
         "index.html",
