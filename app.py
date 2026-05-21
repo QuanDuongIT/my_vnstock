@@ -1,9 +1,14 @@
+import os
+if os.path.exists(".env"):
+    from dotenv import load_dotenv
+    load_dotenv()
+    
 from flask import Flask
 from config import DATABASE_URL
-
 from models.stock_model import db
 from routes.stock_routes import stock_bp
 
+    
 app = Flask(__name__)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL

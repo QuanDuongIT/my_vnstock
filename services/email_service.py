@@ -5,6 +5,8 @@ from flask import current_app
 def send_email(subject, body, to_email):
 
     resend.api_key = current_app.config["RESEND_API_KEY"]
+    print(current_app.config.get("RESEND_API_KEY"))
+
 
     resend.Emails.send({
         "from": "onboarding@resend.dev",

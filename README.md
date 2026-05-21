@@ -2,7 +2,7 @@
 
 # python -m venv venv
 # python -m pip install --upgrade pip
-# python -m pip install flask vnstock3 pandas requests gunicorn sqlalchemy psycopg2-binary flask-sqlalchemy
+# python -m pip install flask vnstock3 pandas requests gunicorn sqlalchemy psycopg2-binary flask-sqlalchemy dotenv
 # freeze > requirements.txt
 
 # venv\Scripts\activate
