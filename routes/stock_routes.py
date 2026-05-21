@@ -83,3 +83,31 @@ def api_stock():
     ).start()
 
     return response
+
+@stock_bp.route("/api/stock/sync", methods=["POST"])
+def api_stock_sync():
+
+    acquired = sync_lock.acquire(blocking=False)
+
+    if not acquired:
+        return jsonify({
+            "status": "already syncing"
+        }), 409
+
+    app = current_app._get_current_object()
+
+    def background_sync():
+        try:
+            with app.app_context():
+                sync_to_db()
+        finally:
+            sync_lock.release()
+
+    threading.Thread(
+        target=background_sync,
+        daemon=True
+    ).start()
+
+    return jsonify({
+        "status": "started"
+    }), 202
