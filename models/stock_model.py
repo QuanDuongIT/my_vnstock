@@ -14,3 +14,5 @@ class StockData(db.Model):
     close = db.Column(db.Float)
 
     volume = db.Column(db.BigInteger)
+
+    duration = db.Column(db.Integer, default=0)
