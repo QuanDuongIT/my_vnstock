@@ -13,39 +13,27 @@ from services.stock_service import (
 from services.email_service import send_email
 from services.stock_filter import VNStockScanner
 import threading
+from services.stock_worker import get_cached_df, refresh_data
 
 stock_bp = Blueprint("stock", __name__)
 
 @stock_bp.route("/")
 def home():
 
-    data = get_data()
-    
-    scanner = VNStockScanner(
-        api_key = current_app.config["VNSTOCK_API_KEY"]
-    )
+    df_filtered = get_cached_df()
 
-    stats = scanner.scan(days = 120)
+    # fallback nếu cache rỗng
+    if df_filtered is None:
+        refresh_data()
+        df_filtered = get_cached_df()
 
-    df_kept, df_removed = scanner.filter_top_n_per_time(
-        stats,
-        "group_name"
-    )
-
-    df_filtered = scanner.edge_filtered(
-        df_kept,
-        3
-    )
-    df_filtered = df_filtered.sort_values(
-            by="time",
-            ascending=False
-    )
-
-    # print(df_filtered)
+    # vẫn rỗng thì báo loading
+    if df_filtered is None:
+        return "Loading data...", 503
 
     return render_template(
         "index.html",
-        data=data,
+        data=get_data(),
         df_filtered=df_filtered,
         format_price=format_price,
         format_volume=format_volume
@@ -84,39 +72,23 @@ sync_lock = threading.Lock()
 @stock_bp.route("/api/stock")
 def api_stock():
 
-    # acquire không block
     acquired = sync_lock.acquire(blocking=False)
 
     if not acquired:
-
         return jsonify({
             "status": "already syncing"
+        }), 409
+
+    try:
+        with current_app.app_context():
+            sync_to_db()
+
+        return jsonify({
+            "status": "success"
         })
 
-    response = jsonify({
-        "status": "success"
-    })
-
-    app = current_app._get_current_object()
-
-    def background_sync():
-
-        try:
-
-            with app.app_context():
-
-                sync_to_db()
-
-        finally:
-
-            sync_lock.release()
-
-    threading.Thread(
-        target=background_sync,
-        daemon=True
-    ).start()
-
-    return response
+    finally:
+        sync_lock.release()
 
 @stock_bp.route("/api/stock/sync", methods=["POST"])
 def api_stock_sync():
