@@ -9,7 +9,9 @@ from services.stock_service import (
     update_stock,
     delete_stock
 )
+
 from services.email_service import send_email
+from services.stock_filter import VNStockScanner
 import threading
 
 stock_bp = Blueprint("stock", __name__)
@@ -18,14 +20,36 @@ stock_bp = Blueprint("stock", __name__)
 def home():
 
     data = get_data()
+    
+    scanner = VNStockScanner(
+        api_key = current_app.config["VNSTOCK_API_KEY"]
+    )
+
+    stats = scanner.scan(days = 120)
+
+    df_kept, df_removed = scanner.filter_top_n_per_time(
+        stats,
+        "group_name"
+    )
+
+    df_filtered = scanner.edge_filtered(
+        df_kept,
+        3
+    )
+    df_filtered = df_filtered.sort_values(
+            by="time",
+            ascending=False
+    )
+
+    # print(df_filtered)
 
     return render_template(
         "index.html",
         data=data,
+        df_filtered=df_filtered,
         format_price=format_price,
         format_volume=format_volume
     )
-
 
 @stock_bp.route("/test-mail")
 def test_mail():

@@ -64,6 +64,58 @@
         {% endfor %}
 
     </table>
+    <table>
+
+        <tr>
+            <th>Symbol</th>
+            <th>Time</th>
+            <th>Exit Time</th>
+            <th>Fibo</th>
+            <th>Return</th>
+            <th>K High</th>
+            <th>K Low</th>
+            <th>Breakdown</th>
+            <th>Day Breakdown</th>
+            <th>End Life</th>
+            <th>Life</th>
+        </tr>
+
+        {% for _, r in df_filtered.iterrows() %}
+
+        <tr>
+
+            <td>{{ r.symbol }}</td>
+
+            <td>
+                {{ r.time.strftime('%Y-%m-%d') }}
+            </td>
+
+            <td>
+                {{ r.exit_time.strftime('%Y-%m-%d') }}
+            </td>
+
+            <td>
+                {{ "%.3f"|format(r.fibo) }}
+            </td>
+
+            <td>{{ "%.2f"|format(r.exit_return * 100) }}%</td>
+
+            <td>{{ "%.3f"|format(r.k_high) }}</td>
+
+            <td>{{ "%.3f"|format(r.k_low) }}</td>
+
+            <td>{{ "%.2f"|format(r.breakdown * 100) }}%</td>
+
+            <td>{{ "%.2f"|format(r.day_breakdown * 100) }}%</td>
+            <td>{{ "True" if r.end_life_cycle else "False" }}</td>
+
+            <td>{{ r.num_candel }}/{{ r.life_cycle }}</td>
+
+        </tr>
+
+        {% endfor %}
+
+    </table>
 
     <br>
 
