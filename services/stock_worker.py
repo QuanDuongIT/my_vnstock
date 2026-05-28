@@ -3,6 +3,8 @@ from threading import Lock
 from apscheduler.schedulers.background import BackgroundScheduler
 from services.stock_filter import VNStockScanner
 from services.email_service import send_email, send_email_html
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 scanner = None
 
@@ -76,6 +78,7 @@ def refresh_data():
         if not df_filtered.empty:
 
             today = datetime.now().strftime("%Y-%m-%d")
+            vn_now = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh"))
 
             rows_html = ""
 
@@ -92,19 +95,19 @@ def refresh_data():
                     row["end_life_cycle"] is True
                     and row["exit_time"].strftime("%Y-%m-%d") == today
                 ):
-                    border_color = "#ef4444"
+                    border_color = "#ff0000"
 
                 # ORANGE
-                elif (row["life_cycle"] - row["num_candel"]) == 1:
-                    border_color = "#f97316"
+                elif (row["life_cycle"] - row["num_candel"]) == 1 and row["end_life_cycle"] is False:
+                    border_color = "#f3db00"
 
                 # GREEN
                 elif row["num_candel"] == 0:
-                    border_color = "#22c55e"
+                    border_color = "#e808f0"
 
                 # YELLOW
                 elif row["num_candel"] <= 3:
-                    border_color = "#eab308"
+                    border_color = "#13e700"
 
                 # =========================
                 # FORMAT VALUES
@@ -325,12 +328,14 @@ def refresh_data():
 
             </html>
             """
+            current_hour = vn_now.hour
+            if 8 <= current_hour < 16:
 
-            send_email_html(
-                subject="VNStock Filter Updated",
-                html_body=html,
-                to_email="tieuduong.25.1.98@gmail.com"
-            )
+                send_email_html(
+                    subject="VNStock Filter Updated",
+                    html_body=html,
+                    to_email="tieuduong.25.1.98@gmail.com"
+                )
 
         # =========================
         # UPDATE REFRESH TIME
@@ -341,6 +346,7 @@ def refresh_data():
     finally:
 
         refresh_lock.release()
+
 def get_cached_df():
     with cache_lock:
         return cached_df

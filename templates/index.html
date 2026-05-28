@@ -1,126 +1,231 @@
+```html
 <!DOCTYPE html>
 <html>
 
 <head>
+
     <title>VCI Stock Dashboard</title>
 
     <style>
         body {
-            font-family: Arial;
+            font-family: Arial, sans-serif;
             padding: 20px;
-            background: #f4f4f4;
+            background: #f5f7fb;
+            color: #333;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            color: #1976d2;
+            margin-bottom: 20px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             background: white;
+            font-size: 14px;
         }
 
         th {
-            background: black;
+            background: #1976d2;
             color: white;
-            padding: 10px;
+            padding: 12px;
+            text-align: center;
         }
 
         td {
             padding: 10px;
-            border: 1px solid #ddd;
             text-align: center;
         }
 
-        tr:nth-child(even) {
-            background: #f9f9f9;
+        .stock-table td {
+            border-top: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #1976d2;
+            text-decoration: none;
+            font-weight: bold;
         }
     </style>
+
 </head>
 
 <body>
 
-    <h1>📈 VCI Stock Dashboard</h1>
+    <div class="card">
 
-    <table>
+        <h1>📈 VCI Stock Dashboard</h1>
 
-        <tr>
-            <th>Time</th>
-            <th>Open</th>
-            <th>High</th>
-            <th>Low</th>
-            <th>Close</th>
-            <th>Volume</th>
-        </tr>
+        <!-- ========================= -->
+        <!-- PRICE TABLE -->
+        <!-- ========================= -->
 
-        {% for r in data %}
+        <table>
 
-        <tr>
-            <td>{{ r.time }}</td>
-            <td>{{ format_price(r.open) }}</td>
-            <td>{{ format_price(r.high) }}</td>
-            <td>{{ format_price(r.low) }}</td>
-            <td>{{ format_price(r.close) }}</td>
-            <td>{{ format_volume(r.volume) }}</td>
-        </tr>
+            <thead>
 
-        {% endfor %}
+                <tr>
+                    <th>Time</th>
+                    <th>Open</th>
+                    <th>High</th>
+                    <th>Low</th>
+                    <th>Close</th>
+                    <th>Volume</th>
+                </tr>
 
-    </table>
-    <table>
+            </thead>
 
-        <tr>
-            <th>Symbol</th>
-            <th>Time</th>
-            <th>Exit Time</th>
-            <th>Fibo</th>
-            <th>Return</th>
-            <th>K High</th>
-            <th>K Low</th>
-            <th>Breakdown</th>
-            <th>Day Breakdown</th>
-            <th>End Life</th>
-            <th>Life</th>
-        </tr>
+            <tbody>
 
-        {% for _, r in df_filtered.iterrows() %}
+                {% for r in data %}
 
-        <tr>
+                <tr>
 
-            <td>{{ r.symbol }}</td>
+                    <td>{{ r.time }}</td>
 
-            <td>
-                {{ r.time.strftime('%Y-%m-%d') }}
-            </td>
+                    <td>{{ format_price(r.open) }}</td>
 
-            <td>
-                {{ r.exit_time.strftime('%Y-%m-%d') }}
-            </td>
+                    <td>{{ format_price(r.high) }}</td>
 
-            <td>
-                {{ "%.3f"|format(r.fibo) }}
-            </td>
+                    <td>{{ format_price(r.low) }}</td>
 
-            <td>{{ "%.2f"|format(r.exit_return * 100) }}%</td>
+                    <td>{{ format_price(r.close) }}</td>
 
-            <td>{{ "%.3f"|format(r.k_high) }}</td>
+                    <td>{{ format_volume(r.volume) }}</td>
 
-            <td>{{ "%.3f"|format(r.k_low) }}</td>
+                </tr>
 
-            <td>{{ "%.2f"|format(r.breakdown * 100) }}%</td>
+                {% endfor %}
 
-            <td>{{ "%.2f"|format(r.day_breakdown * 100) }}%</td>
-            <td>{{ "True" if r.end_life_cycle else "False" }}</td>
+            </tbody>
 
-            <td>{{ r.num_candel }}/{{ r.life_cycle }}</td>
+        </table>
 
-        </tr>
+    </div>
 
-        {% endfor %}
+    <!-- ========================= -->
+    <!-- FILTER TABLE -->
+    <!-- ========================= -->
 
-    </table>
+    <div class="card">
 
-    <br>
+        <h1>📊 VNStock Filter</h1>
 
-    <a href="/api/stock/data">JSON API</a>
+        <table class="stock-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>Symbol</th>
+
+                    <th>Time</th>
+
+                    <th>Exit Time</th>
+
+                    <th>Exit Return</th>
+
+                    <th>End Life</th>
+
+                    <th>Life</th>
+
+                    <th>Valid %</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for _, r in df_filtered.iterrows() %}
+
+                {% set border_color = "#e0e0e0" %}
+
+                <!-- RED -->
+                {% if r.end_life_cycle and r.exit_time.strftime('%Y-%m-%d') == today %}
+                {% set border_color = "#ff0000" %}
+
+                <!-- ORANGE -->
+                {% elif (r.life_cycle - r.num_candel) == 1 and r.end_life_cycle == False%}
+                {% set border_color = "#f3db00" %}
+
+                <!-- PINK -->
+                {% elif r.num_candel == 0 %}
+                {% set border_color = "#e808f0" %}
+
+                <!-- GREEN -->
+                {% elif r.num_candel <= 3 %} {% set border_color="#13e700" %} {% endif %} {% set
+                    exit_return_color="#16a34a" if r.exit_return> 0 else "#dc2626" %}
+
+                    <tr>
+
+                        <td style="
+                        border-left: 8px solid {{ border_color }};
+                        font-weight: bold;
+                    ">
+                            {{ r.symbol }}
+                        </td>
+
+                        <td>
+                            {{ r.time.strftime('%Y-%m-%d') }}
+                        </td>
+
+                        <td>
+                            {{ r.exit_time.strftime('%Y-%m-%d') }}
+                        </td>
+
+                        <td style="
+                        color: {{ exit_return_color }};
+                        font-weight: bold;
+                    ">
+                            {{ "%.2f"|format(r.exit_return * 100) }}%
+                        </td>
+
+                        <td style="font-weight: bold;">
+
+                            {{ "❌ Close" if r.end_life_cycle else "✅ Open" }}
+
+                        </td>
+
+                        <td>
+
+                            {{ r.num_candel }}/{{ r.life_cycle }}
+
+                        </td>
+
+                        <td>
+
+                            {{ "%.4f"|format(r.valid_pct) }}
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+            </tbody>
+
+        </table>
+
+        <a href="/api/stock/data" class="link">
+            JSON API
+        </a>
+
+    </div>
 
 </body>
 
 </html>
+```
