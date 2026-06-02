@@ -129,6 +129,19 @@ class VNStockScanner:
 
         return data
 
+    def window_time(
+        self,
+        days=120
+    ):
+        end_date = datetime.today()
+
+        start_date = end_date - timedelta(days=days)
+
+        start_str = start_date.strftime("%Y-%m-%d")
+        end_str = end_date.strftime("%Y-%m-%d")
+
+        return start_str, end_str
+    
     # =========================
     # MAIN SCAN
     # =========================
@@ -141,12 +154,7 @@ class VNStockScanner:
         if symbols is None:
             symbols = self.get_symbols()
 
-        end_date = datetime.today()
-
-        start_date = end_date - timedelta(days=days)
-
-        start_str = start_date.strftime("%Y-%m-%d")
-        end_str = end_date.strftime("%Y-%m-%d")
+        start_str, end_str = self.window_time(days=120)
 
         entrys = []
 
@@ -186,7 +194,43 @@ class VNStockScanner:
         stats = pd.DataFrame(entrys)
 
         return stats
+    
+    def get_data_group(
+        self,
+        group="VN30",
+        start_day="2021-03-05",
+        end_day="2026-03-04",
+        n_day=3
+    ):
+        q = Quote(symbol=group, source="KBS")
 
+        data = q.history(
+            start=start_day,
+            end=end_day
+        )
+
+        data["time"] = pd.to_datetime(data["time"]).dt.normalize()
+
+        n = len(data)
+
+        # đủ n_day phía sau hay không
+        data["end_life"] = (np.arange(n) + n_day < n)
+
+        # index đích
+        target_idx = np.minimum(np.arange(n) + n_day, n - 1)
+
+        # giá đóng cửa tại thời điểm thoát lệnh
+        data["exit_close"] = data["close"].iloc[target_idx].to_numpy()
+
+        # lợi nhuận
+        data["exit_return"] = (
+            data["exit_close"] / data["close"] - 1
+        )
+        data["symbol"] = group
+        data["num_candel"] = n_day
+
+
+        return data
     # =========================
     # YOUR OLD FUNCTIONS
     # =========================
@@ -305,104 +349,310 @@ class VNStockScanner:
         df = stats.copy()
         df["time"] = pd.to_datetime(df["time"])
         edge_head = 3
+        start_str, end_str = self.window_time(days=120)
+        vn30_data = self.get_data_group(group="VN30", start_day=start_str, end_day=end_str)
 
         def process_group(input_x):
 
-          def edge_2():
-            x = input_x[input_x["group_name"] == group_name].copy()
+            def edge_2():
+                x = input_x[input_x["group_name"] == group_name].copy()
 
 
-            # ===== CASE 1: điều kiện fail =====
-            edge2 = None
-            dow = x[
-                (x["candles_to_intersect"] < 0)
-                & (x["ma_type"] == True)
-                & (x["breakdown"] > 0)
-            ]
-
-            check = dow
-            # for i in range(0, len(check)):
-            #   df_day = pd.read_csv(f"/content/stock/{check["symbol"].iloc[i]}_5years.csv")
-            # return check.sort_values("fibo", ascending=True).head(10 * len(check) // 10)
-
-            top_n = check.loc[(check["k_range"]).abs().sort_values(ascending=True).index].head(3 * len(check) // 5)
-            top_n = top_n.loc[(top_n["valid_pct"]-top_n["valid_pct"].mean()).abs().sort_values(ascending=True).index].head(3 * len(top_n) // 5)
-            top_n["k_mean"] = top_n[["k_low", "k_high"]].mean(axis=1)
-            top_n = top_n.loc[(top_n["k_mean"]).abs().sort_values(ascending=True).index].head(4 * len(top_n) // 5)
-            # top_n = top_n.sort_values("valid_pct", ascending=False).head(3 * len(top_n) // 5)
-
-
-            top_n = top_n.sort_values("valid_pct", ascending=False).head(3 * len(top_n) // 5)
-
-            top_n = top_n[
-                    (top_n["day_breakdown"] > 0)
-                    & (top_n["k_low_pre"] > 0)
-                    & (top_n["fibo"] > 0)
+                # ===== CASE 1: điều kiện fail =====
+                edge2 = None
+                dow = x[
+                    (x["candles_to_intersect"] < 0)
+                    & (x["ma_type"] == True)
+                    & (x["breakdown"] > 0)
                 ]
 
-            edge2 = top_n.sort_values("k_high", ascending=False)
+                check = dow
+                # for i in range(0, len(check)):
+                #   df_day = pd.read_csv(f"/content/stock/{check["symbol"].iloc[i]}_5years.csv")
+                # return check.sort_values("fibo", ascending=True).head(10 * len(check) // 10)
 
-            if edge2 is not None and len(edge2) > 0: return edge2.head(edge_head)
-
-          def edge_1():
-            x = input_x[input_x["group_name"] == group_name].copy()
-
-            # ===== CHECK =====
-            pct_positive = (x["diff"] > 0).mean()
-            # pct_trend_low = (x["k_low"] > 0).mean()
-
-            # ===== CASE 1: điều kiện fail =====
-            edge1 = None
-            up = x[
-                (x["candles_to_intersect"] >= 0)
-                & (x["breakdown"] > 0)
-                & (x["ma_type"] == True)
-            ]
-
-            check = up
-            top_n = check.loc[(check["k_range"]).sort_values(ascending=False).index].head(3 * len(check) // 5)
-            top_n = top_n.loc[(top_n["valid_pct"]-top_n["valid_pct"].mean()).abs().sort_values(ascending=True).index].head(3 * len(top_n) // 5)
-            top_n["k_mean"] = top_n[["k_low", "k_high"]].mean(axis=1)
-            top_n = top_n.loc[(top_n["k_mean"]).abs().sort_values(ascending=True).index].head(3 * len(top_n) // 5)
-
-            if not top_n.empty and (top_n["day_of_week"] != 5).all():
-              top_n = top_n.sort_values("valid_pct", ascending=True).head(3 * len(top_n) // 5)
-
-              top_n = top_n[
-                      (top_n["day_breakdown"] < 0)
-                      # & (top_n["k_low_pre"] > 0)
-                      & (top_n["fibo"] > 0)
-                  ]
-            else:
-              top_n = top_n.sort_values("valid_pct", ascending=False).head(3 * len(top_n) // 5)
-
-              top_n = top_n[
-                      (top_n["day_breakdown"] > 0)
-                      # & (top_n["k_low_pre"] > 0)
-                      & (top_n["fibo"] > 0)
-                  ]
-
-            edge1 = top_n.sort_values("k_high", ascending=False)
-            # edge1 = top_n.sort_values("k_mean", ascending=False).head(edge_head)
-            # edge1 = top_n.head(edge_head)
-
-            if edge1 is not None and len(edge1) > 0: return edge1.head(edge_head)
-
-          result = []
-
-          e2 = edge_2()
-          if e2 is not None:
-              result.append(e2)
-
-          e1 = edge_1()
-          if e1 is not None and len(result)==0:
-              result.append(e1)
+                top_n = check.loc[(check["k_range"]).abs().sort_values(ascending=True).index].head(3 * len(check) // 5)
+                top_n = top_n.loc[(top_n["valid_pct"]-top_n["valid_pct"].mean()).abs().sort_values(ascending=True).index].head(3 * len(top_n) // 5)
+                top_n["k_mean"] = top_n[["k_low", "k_high"]].mean(axis=1)
+                top_n = top_n.loc[(top_n["k_mean"]).abs().sort_values(ascending=True).index].head(4 * len(top_n) // 5)
+                # top_n = top_n.sort_values("valid_pct", ascending=False).head(3 * len(top_n) // 5)
 
 
-          if len(result) == 0:
-              return pd.DataFrame()
+                top_n = top_n.sort_values("valid_pct", ascending=False).head(3 * len(top_n) // 5)
 
-          return pd.concat(result, ignore_index=True)
+                top_n = top_n[
+                        (top_n["day_breakdown"] > 0)
+                        & (top_n["k_low_pre"] > 0)
+                        & (top_n["fibo"] > 0)
+                    ]
+
+                edge2 = top_n.sort_values("k_high", ascending=False)
+
+                if edge2 is not None and len(edge2) > 0: return edge2.head(edge_head)
+
+            def edge_1():
+                x = input_x[input_x["group_name"] == group_name].copy()
+
+                # ===== CHECK =====
+                pct_positive = (x["diff"] > 0).mean()
+                # pct_trend_low = (x["k_low"] > 0).mean()
+
+                # ===== CASE 1: điều kiện fail =====
+                edge1 = None
+                up = x[
+                    (x["candles_to_intersect"] >= 0)
+                    & (x["breakdown"] > 0)
+                    & (x["ma_type"] == True)
+                ]
+
+                check = up
+                top_n = check.loc[(check["k_range"]).sort_values(ascending=False).index].head(3 * len(check) // 5)
+                top_n = top_n.loc[(top_n["valid_pct"]-top_n["valid_pct"].mean()).abs().sort_values(ascending=True).index].head(3 * len(top_n) // 5)
+                top_n["k_mean"] = top_n[["k_low", "k_high"]].mean(axis=1)
+                top_n = top_n.loc[(top_n["k_mean"]).abs().sort_values(ascending=True).index].head(3 * len(top_n) // 5)
+
+                if not top_n.empty and (top_n["day_of_week"] != 5).all():
+                    top_n = top_n.sort_values("valid_pct", ascending=True).head(3 * len(top_n) // 5)
+
+                    top_n = top_n[
+                            (top_n["day_breakdown"] < 0)
+                            # & (top_n["k_low_pre"] > 0)
+                            & (top_n["fibo"] > 0)
+                        ]
+                else:
+                    top_n = top_n.sort_values("valid_pct", ascending=False).head(3 * len(top_n) // 5)
+
+                    top_n = top_n[
+                            (top_n["day_breakdown"] > 0)
+                            # & (top_n["k_low_pre"] > 0)
+                            & (top_n["fibo"] > 0)
+                        ]
+
+                edge1 = top_n.sort_values("k_high", ascending=False)
+                # edge1 = top_n.sort_values("k_mean", ascending=False).head(edge_head)
+                # edge1 = top_n.head(edge_head)
+
+                if edge1 is not None and len(edge1) > 0: return edge1.head(edge_head)
+
+
+            def edge_short_2():
+                x = input_x[
+                    input_x["group_name"] == group_name
+                ].copy()
+
+                edge2 = None
+
+                dow = x[
+                    (x["candles_to_intersect"] < 0)
+                    & (x["ma_type"] == False)
+                    & (x["breakdown"] < 0)
+                ]
+
+                check = dow
+
+                if len(check) == 0:
+                    return None
+
+                # =========================
+                # FILTER
+                # =========================
+
+                top_n = check.loc[
+                    (check["k_range"]).abs()
+                    .sort_values(ascending=False).index
+                ].head(3 * len(check) // 5)
+
+                if len(top_n) == 0:
+                    return None
+
+                top_n = top_n.loc[
+                    (top_n["valid_pct"] - top_n["valid_pct"].mean())
+                    .abs()
+                    .sort_values(ascending=True).index
+                ].head(3 * len(top_n) // 5)
+
+                if len(top_n) == 0:
+                    return None
+
+                top_n["k_mean"] = top_n[
+                    ["k_low", "k_high"]
+                ].mean(axis=1)
+
+                top_n = top_n.loc[
+                    (top_n["k_mean"])
+                    .abs()
+                    .sort_values(ascending=True).index
+                ].head(4 * len(top_n) // 5)
+
+                if len(top_n) == 0:
+                    return None
+
+                top_n = top_n.sort_values(
+                    "valid_pct",
+                    ascending=False
+                ).head(3 * len(top_n) // 5)
+
+                # =========================
+                # FINAL CONDITION
+                # =========================
+
+                top_n = top_n[
+                    # (top_n["day_breakdown"] < 0)
+                    # # & (top_n["k_low_pre"] > 0)
+                    # &
+                        (top_n["fibo"] > 0)
+                ]
+
+                if len(top_n) == 0:
+                    return None
+
+                edge2 = top_n.sort_values(
+                    "k_high",
+                    ascending=False
+                )
+                if edge2 is not None and len(edge2) > 0:
+
+                    row1 = edge2.head(1).copy()
+
+                    match = vn30_data.loc[
+                        vn30_data["time"].eq(row1["time"].iloc[0])
+                    ]
+
+                    if not match.empty:
+                        row2 = match.iloc[0]
+
+                        common_cols = row1.columns.intersection(row2.index)
+
+                        row1.loc[row1.index[0], common_cols] = row2.loc[common_cols]
+
+                    return row1
+
+                return None
+
+            def edge_short_1():
+
+                x = input_x[
+                    input_x["group_name"] == group_name
+                ].copy()
+
+                edge1 = None
+
+                up = x[
+                    (x["candles_to_intersect"] >= 0)
+                    & (x["breakdown"] < 0)
+                    & (x["ma_type"] == False)
+                ]
+
+                check = up
+
+                if len(check) == 0:
+                    return None
+
+                # =========================
+                # FILTER
+                # =========================
+
+                top_n = check.loc[
+                    (check["k_range"])
+                    .sort_values(ascending=False).index
+                ].head(3 * len(check) // 5)
+
+                if len(top_n) == 0:
+                    return None
+
+                top_n = top_n.loc[
+                    (top_n["valid_pct"] - top_n["valid_pct"].mean())
+                    .abs()
+                    .sort_values(ascending=False).index
+                ].head(3 * len(top_n) // 5)
+
+                if len(top_n) == 0:
+                    return None
+
+                top_n["k_mean"] = top_n[
+                    ["k_low", "k_high"]
+                ].mean(axis=1)
+
+                top_n = top_n.loc[
+                    (top_n["k_mean"])
+                    .abs()
+                    .sort_values(ascending=True).index
+                ].head(3 * len(top_n) // 5)
+
+                if len(top_n) == 0:
+                    return None
+
+                # =========================
+                # CONDITION
+                # =========================
+
+                if not top_n.empty and (top_n["day_of_week"] != 5).all():
+
+                    top_n = top_n.sort_values(
+                        "valid_pct",
+                        ascending=False
+                    ).head(3 * len(top_n) // 5)
+
+                    top_n = top_n[
+                        (top_n["day_breakdown"] < 0)
+                        & (top_n["fibo"] > 0)
+                    ]
+
+                else:
+
+                    top_n = top_n.sort_values(
+                        "valid_pct",
+                        ascending=True
+                    ).head(3 * len(top_n) // 5)
+
+                    # top_n = top_n[
+                    #     (top_n["day_breakdown"] > 0)
+                    #     & (top_n["fibo"] > 0)
+                    # ]
+
+                if len(top_n) == 0:
+                    return None
+
+                edge1 = top_n.sort_values(
+                    "k_high",
+                    ascending=False
+                )
+
+                if edge1 is not None and len(edge1) > 0:
+
+                    row1 = edge1.head(1).copy()
+
+                    match = vn30_data.loc[
+                        vn30_data["time"].eq(row1["time"].iloc[0])
+                    ]
+
+                    if not match.empty:
+                        row2 = match.iloc[0]
+
+                        common_cols = row1.columns.intersection(row2.index)
+
+                        row1.loc[row1.index[0], common_cols] = row2.loc[common_cols]
+
+                    return row1
+
+                return None
+
+
+            result = []
+
+            e2 = edge_2()
+            if e2 is not None:
+                result.append(e2)
+
+            e1 = edge_1()
+            if e1 is not None and len(result)==0:
+                result.append(e1)
+
+
+            if len(result) == 0:
+                return pd.DataFrame()
+
+            return pd.concat(result, ignore_index=True)
 
         df_kept = (
             df.groupby("time", group_keys=False)

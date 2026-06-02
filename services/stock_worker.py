@@ -1,4 +1,5 @@
 import time
+from datetime import time as dt_time
 from threading import Lock
 from apscheduler.schedulers.background import BackgroundScheduler
 from services.stock_filter import VNStockScanner
@@ -328,14 +329,22 @@ def refresh_data():
 
             </html>
             """
-            current_hour = vn_now.hour
-            if 8 <= current_hour < 16:
+            current_time = vn_now.time()
+
+            if dt_time(13, 45) <= current_time <= dt_time(14, 30):
 
                 send_email_html(
                     subject="VNStock Filter Updated",
                     html_body=html,
                     to_email="tieuduong.25.1.98@gmail.com"
                 )
+            # else:
+                
+            #     send_email_html(
+            #         subject="VNStock Filter Updated",
+            #         html_body="""<html><h1>No data</h1></html>""",
+            #         to_email="tieuduong.25.1.98@gmail.com"
+            #     )
 
         # =========================
         # UPDATE REFRESH TIME

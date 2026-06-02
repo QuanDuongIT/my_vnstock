@@ -63,58 +63,6 @@
 </head>
 
 <body>
-
-    <div class="card">
-
-        <h1>📈 VCI Stock Dashboard</h1>
-
-        <!-- ========================= -->
-        <!-- PRICE TABLE -->
-        <!-- ========================= -->
-
-        <table>
-
-            <thead>
-
-                <tr>
-                    <th>Time</th>
-                    <th>Open</th>
-                    <th>High</th>
-                    <th>Low</th>
-                    <th>Close</th>
-                    <th>Volume</th>
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                {% for r in data %}
-
-                <tr>
-
-                    <td>{{ r.time }}</td>
-
-                    <td>{{ format_price(r.open) }}</td>
-
-                    <td>{{ format_price(r.high) }}</td>
-
-                    <td>{{ format_price(r.low) }}</td>
-
-                    <td>{{ format_price(r.close) }}</td>
-
-                    <td>{{ format_volume(r.volume) }}</td>
-
-                </tr>
-
-                {% endfor %}
-
-            </tbody>
-
-        </table>
-
-    </div>
-
     <!-- ========================= -->
     <!-- FILTER TABLE -->
     <!-- ========================= -->
@@ -224,6 +172,57 @@
         </a>
 
     </div>
+    <div class="card">
+
+        <h1>📈 VCI Stock Dashboard</h1>
+
+        <!-- ========================= -->
+        <!-- PRICE TABLE -->
+        <!-- ========================= -->
+
+        <table>
+
+            <thead>
+
+                <tr>
+                    <th>Time</th>
+                    <th>Open</th>
+                    <th>High</th>
+                    <th>Low</th>
+                    <th>Close</th>
+                    <th>Volume</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for r in data %}
+
+                <tr>
+
+                    <td>{{ r.time }}</td>
+
+                    <td>{{ format_price(r.open) }}</td>
+
+                    <td>{{ format_price(r.high) }}</td>
+
+                    <td>{{ format_price(r.low) }}</td>
+
+                    <td>{{ format_price(r.close) }}</td>
+
+                    <td>{{ format_volume(r.volume) }}</td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
 
 </body>
 
