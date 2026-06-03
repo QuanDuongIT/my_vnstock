@@ -107,7 +107,7 @@ def refresh_data():
                     border_color = "#e808f0"
 
                 # YELLOW
-                elif row["num_candel"] <= 3:
+                elif row["num_candel"] <= 3 and row["end_life_cycle"] is False:
                     border_color = "#13e700"
 
                 # =========================

@@ -649,6 +649,14 @@ class VNStockScanner:
                 result.append(e1)
 
 
+            e2_s = edge_short_2()
+            if e2_s is not None:
+                result.append(e2_s)
+
+            e1_s = edge_short_1()
+            if e1_s is not None:
+                result.append(e1_s)
+
             if len(result) == 0:
                 return pd.DataFrame()
 
